@@ -1,7 +1,25 @@
-let express = require('express');
-let app = express();
-let jwt = require('express-jwt');
-let rsaValidation = require('auth0-api-jwt-rsa-validation');
+var express = require('express');
+var app = express();
+var jwt = require('express-jwt');
+var rsaValidation = require('auth0-api-jwt-rsa-validation');
+
+var jwtCheck = jwt({
+  secret: rsaValidation(),
+  algorithms: ['RS256'],
+  issuer: "https://YOUR-AUTH0-DOMAIN.auth0.com/",
+  audience: 'https://movieanalyst.com'
+});
+
+// Enable the use of the jwtCheck middleware in all of our routes
+app.use(jwtCheck);
+
+// If we do not get the correct credentials, we’ll return an appropriate message
+app.use(function (err, req, res, next) {
+  if (err.name === 'UnauthorizedError') {
+    res.status(401).json({message:'Missing or invalid token'});
+  }
+});
+
 
 // Implement the movies API endpoint
 app.get('/movies', function(req, res){
