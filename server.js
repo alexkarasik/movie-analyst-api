@@ -3,23 +3,80 @@ var app = express();
 var jwt = require('express-jwt');
 var rsaValidation = require('auth0-api-jwt-rsa-validation');
 
-var jwtCheck = jwt({
-  secret: rsaValidation(),
-  algorithms: ['RS256'],
-  issuer: "https://YOUR-AUTH0-DOMAIN.auth0.com/",
-  audience: 'https://movieanalyst.com'
-});
 
-// Enable the use of the jwtCheck middleware in all of our routes
-app.use(jwtCheck);
-
-// If we do not get the correct credentials, we’ll return an appropriate message
-app.use(function (err, req, res, next) {
-  if (err.name === 'UnauthorizedError') {
-    res.status(401).json({message:'Missing or invalid token'});
+//We're checkong if the token has the correct scope from the decoded JQWY .
+//If it doesn't we'll send a forbidden message, otherwise we'll send the data
+let guard = function(re, res, next){
+  switch(req.path){
+    //if the request is for movie reviews, we'll check to see if the token has general scope
+    case '/movies' : {
+      let permissions = ['general'];
+      for(let i = 0; i < permissions.length; i++){
+        if(req.user.scope.includes(permissions[i])){
+          next();
+        } else {
+          res.send(403, {message: 'Forbidden'});
+        }
+      }
+      break;
+    }
+    //Same for the reviewers
+    case '/reviewers': {
+      let permissions = ['general'];
+      for(let i = 0; i < permissions.length; i++){
+        if(req.user.scope.includes(permissions[i])){
+          next();
+        } else {
+          res.send(403, {message: 'Forbidden'});
+        }
+      }
+      break;
+    }
+    //Same for publications
+    case '/publications': {
+      let permissions = ['general'];
+      for(let i = 0; i < permissions.length; i++){
+        if(req.user.scope.includes(permissions[i])){
+          next();
+        } else {
+          res.send(403, {message: 'Forbidden'});
+        }
+      }
+      break;
+    }
+    //For the pending route, we'll check to make sure the token has the  persiion of the admin before returning the results
+    case '/pending': {
+      let permissions = ['admin'];
+      for(let i = 0; i < permissions.length; i++){
+        if(req.user.scope.includes(permissions[i])){
+          next();
+        } else {
+          res.send(403, {message: 'Forbidden'});
+        }
+      }
+      break;
+    }
   }
-});
 
+  var jwtCheck = jwt({
+    secret: rsaValidation(),
+    algorithms: ['RS256'],
+    issuer: "https://YOUR-AUTH0-DOMAIN.auth0.com/",
+    audience: 'https://movieanalyst.com'
+  });
+
+  // Enable the use of the jwtCheck middleware in all of our routes
+  app.use(jwtCheck);
+
+  // If we do not get the correct credentials, we’ll return an appropriate message
+  app.use(function (err, req, res, next) {
+    if (err.name === 'UnauthorizedError') {
+      res.status(401).json({message:'Missing or invalid token'});
+    }
+  });
+
+
+  app.use(guard);
 
 // Implement the movies API endpoint
 app.get('/movies', function(req, res){
@@ -82,6 +139,6 @@ app.get('/pending', function(req, res){
 
   //Send the list of pending movie reviews as a JSON array
   res.send(pending);
-})
+});
 
 app.listen(8080);
